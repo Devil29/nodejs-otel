@@ -1,0 +1,64 @@
+exporters:
+  logging:
+    verbosity: detailed
+  otlphttp:
+    metrics_endpoint: https://asi-dev-kfuse.getvymo.com:443/ingester/otlp/metrics
+    traces_endpoint: https://asi-dev-kfuse.getvymo.com/ingester/otlp/traces
+    logs_endpoint: https://asi-dev-kfuse.getvymo.com/ingester/otlp/logs
+extensions:
+  health_check: {}
+  memory_ballast:
+    size_in_percentage: 40
+processors:
+  batch:
+    timeout: 10s
+  memory_limiter:
+    check_interval: 5s
+    limit_percentage: 80
+    spike_limit_percentage: 25
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        cors:
+          allowed_origins: "*"
+        endpoint: 0.0.0.0:4318
+service:
+  extensions:
+    - health_check
+    - memory_ballast
+  pipelines:
+    metrics:
+      exporters:
+        - logging
+        - otlphttp
+      processors:
+        - memory_limiter
+        - batch
+      receivers:
+        - otlp
+    traces:
+      exporters:
+        - otlphttp
+        - logging
+      processors:
+        - memory_limiter
+        - batch
+      receivers:
+        - otlp
+    logs:
+      exporters:
+        - logging
+        - otlphttp
+      processors:
+        - memory_limiter
+        - batch
+      receivers:
+        - otlp
+  telemetry:
+    metrics:
+      address: 0.0.0.0:8888
+    logs:
+      level: debug
